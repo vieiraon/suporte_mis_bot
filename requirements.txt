@@ -1,5 +1,6 @@
+pyTelegramBotAPI
+Flask
+requests
+python-dotenv
 pandas
 pyodbc
-python-dotenv
-pyTelegramBotAPI
-requests
