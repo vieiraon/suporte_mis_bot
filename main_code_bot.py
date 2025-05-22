@@ -30,7 +30,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ============================ VARIÁVEIS DE AMBIENTE E CONFIG ============================
-load_dotenv()
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 ACESS_TOKEN = os.getenv("ACESS_TOKEN")
