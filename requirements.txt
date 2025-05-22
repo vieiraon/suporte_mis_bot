@@ -4,4 +4,5 @@ requests
 python-dotenv
 pandas
 pyodbc
+psycopg2-binary
 openpyxl
