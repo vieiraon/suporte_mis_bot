@@ -42,7 +42,6 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 bot = telebot.TeleBot(TOKEN)
 DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-app = Flask(__name__)
 
 connection_string = (
     f"DRIVER={{PostgreSQL Unicode}};"
@@ -662,6 +661,10 @@ def enviar_email_acesso(destinatario, senha, nome_usuario, cargo):
         logger.warning(f"Ocorreu um erro enviar o email para o email {remetente}: {e} em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
     return False
 
+app = Flask(__name__)
+
+print("Tipo de app:", type(app))
+
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
     update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
@@ -671,10 +674,9 @@ def webhook():
 @app.before_first_request
 def setup_webhook():
     bot.remove_webhook()
-    bot.set_webhook(url=f"hhttps://suporte-mis-bot-z16u.onrender.com/{TOKEN}")
+    bot.set_webhook(url=f"https://suporte-mis-bot-z16u.onrender.com/{TOKEN}")
     print(f"Webhook setado às {datetime.now().strftime('%H:%M:%S')}")
 
-# Inicia o bot normalmente
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # PORT é obrigatório no Render
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
