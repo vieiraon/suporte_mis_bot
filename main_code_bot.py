@@ -357,13 +357,20 @@ def escape_markdown_v2(text):
         
 def buscar_senha_por_email(chat_id, email):
     try:
-        connection = pyodbc.connect(connection_string)
+        # Conexão com PostgreSQL via psycopg2
+        connection = psycopg2.connect(
+            host=DB_HOST,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT
+        )
         cursor = connection.cursor()
 
         query = """
             SELECT senha
             FROM cadastro_rid
-            WHERE email_corp = ?
+            WHERE email_corp = %s
             ORDER BY id DESC
             LIMIT 1
         """
@@ -371,15 +378,14 @@ def buscar_senha_por_email(chat_id, email):
         row = cursor.fetchone()
 
         if row and row[0]:
-            # Garantir que a senha é tratada como string
-            senha = str(row[0])  # Converter para string
-            senha_escapada = escape_markdown_v2(senha)  # Aplicar o escape
+            senha = str(row[0])
+            senha_escapada = escape_markdown_v2(senha)
 
             bot.send_message(chat_id, "❗Lembre-se:\nESTA SENHA É DE TOTAL RESPONSABILIDADE SUA, PORTANTO, CUIDADO COM ESSA INFORMAÇÃO.")
             time.sleep(3)
             bot.send_message(
                 chat_id,
-                f"🔑 Sua senha do RID é:\n||{senha_escapada}||",  # Usar a senha escapada
+                f"🔑 Sua senha do RID é:\n||{senha_escapada}||",
                 parse_mode="MarkdownV2"
             )
             time.sleep(1)
@@ -389,7 +395,8 @@ def buscar_senha_por_email(chat_id, email):
             bot.send_message(chat_id, "❌ Não encontramos este e-mail no cadastro RID.")
             logger.warning(f"Usuário {chat_id} tentou recuperação, mas o e-mail não foi encontrado em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
             menu_comandos(chat_id)
-    except pyodbc.Error as e:
+
+    except psycopg2.Error as e:
         bot.send_message(chat_id, "⚠️ Erro ao consultar a senha. Tente novamente mais tarde.")
         print(f"Erro técnico (Banco): {e}")
         menu_comandos(chat_id)
