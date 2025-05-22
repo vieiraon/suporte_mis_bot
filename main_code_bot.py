@@ -433,7 +433,7 @@ def cadastro_rid(call):
     bot.send_message(chat_id, "⁉️ *Seu Nome não aparece no BI em nenhuma das ABAs como mostrado na foto abaixo?*", parse_mode='Markdown')
 
 # Envia a imagem do diretório local
-    caminho_absoluto = os.path.join(os.path.dirname(__file__), f'img\\nome_nao_aparece.png')
+    caminho_absoluto = os.path.join(os.path.dirname(__file__), 'img', 'nome_nao_aparece.png')
     with open(caminho_absoluto, 'rb') as photo:
         bot.send_photo(chat_id, photo)
     time.sleep(2)
@@ -642,7 +642,7 @@ def enviar_email_acesso(destinatario, senha, nome_usuario, cargo):
     msg_alternative.attach(MIMEText(corpo, 'html'))
 
     # Adiciona a imagem corretamente com Content-ID (depois do HTML)
-    caminho_absoluto = os.path.join(os.path.dirname(__file__), f'img\\teleco.png')
+    caminho_absoluto = os.path.join(os.path.dirname(__file__), 'img', 'teleco.png')
     with open(caminho_absoluto, 'rb') as img_file:
         img = MIMEImage(img_file.read())
         img.add_header('Content-ID', '<teleco>') 
