@@ -9,6 +9,7 @@ import os
 import smtplib
 import pandas as pd
 import pyodbc
+import psycopg2
 from dotenv import load_dotenv
 from datetime import datetime
 from email.mime.text import MIMEText
@@ -42,13 +43,14 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 bot = telebot.TeleBot(TOKEN)
 DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-connection_string = (
-    f"DRIVER={{PostgreSQL Unicode}};"
-    f"SERVER={DB_HOST};"
-    f"DATABASE={DB_NAME};"
-    f"UID={DB_USER};"
-    f"PWD={DB_PASSWORD};"
+connection = psycopg2.connect(
+    host=DB_HOST,
+    port=DB_PORT,
+    dbname=DB_NAME,
+    user=DB_USER,
+    password=DB_PASSWORD
 )
+cursor = connection.cursor()
 
 # ============================ DICIONÁRIOS E ESTADOS =====================================
 estados = {}
@@ -227,8 +229,6 @@ def handle_document(message):
     except Exception as e:
         bot.send_message(message.chat.id, f"Erro ao ler o arquivo: {e}")
 
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-
 def consultar_mudancas_e_gerar_excel(chat_id, df_excel, data_inicial, data_final):
     try:
         # Valida colunas mínimas
@@ -245,19 +245,25 @@ def consultar_mudancas_e_gerar_excel(chat_id, df_excel, data_inicial, data_final
             bot.send_message(chat_id, "⚠️ Nenhum contrato encontrado na planilha enviada.")
             return
 
-        # Conexão com banco
-        connection = pyodbc.connect(connection_string)
+        # Conexão com banco usando psycopg2
+        connection = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
         cursor = connection.cursor()
 
         # Prepara a query
         data_inicial_str = data_inicial.strftime('%Y-%m-%d')
         data_final_str = data_final.strftime('%Y-%m-%d')
-        placeholder = ','.join('?' for _ in contratos)
+        placeholder = ','.join(['%s'] * len(contratos))
 
         query = f"""
             SELECT DISTINCT ch_contrato
             FROM mudancas_plano
-            WHERE dh_alteracao BETWEEN ? AND ?
+            WHERE dh_alteracao BETWEEN %s AND %s
             AND ch_contrato IN ({placeholder})
         """
 
