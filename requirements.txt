@@ -1,5 +1,5 @@
 pyTelegramBotAPI
-Flask
+Flask==2.2.5
 requests
 python-dotenv
 pandas
