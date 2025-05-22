@@ -1,6 +1,7 @@
 # ============================ IMPORTAÇÕES E CONFIGURAÇÕES ============================
 import logging
 import time
+import threading
 import telebot
 import random
 import requests
@@ -73,6 +74,14 @@ EMAILS_AUTORIZADOS_BLINDAGEM = {
 
 UPLOAD_PATH = "uploads_temporarios"
 os.makedirs(UPLOAD_PATH, exist_ok=True)
+
+# ============================ LOOP ACTIVE BOT ================================
+def manter_ativo():
+    while True:
+        print("ACTIVE BOT LOOP 60 MINUTE")
+        time.sleep(60)  # Espera 1 minuto
+
+threading.Thread(target=manter_ativo, daemon=True).start()
 
 # ============================ HANDLERS DE MENSAGEM ============================
 def menu_comandos(chat_id):
