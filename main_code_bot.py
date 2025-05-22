@@ -43,6 +43,7 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 bot = telebot.TeleBot(TOKEN)
 DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+WEBHOOK_URL = f"https://suporte-mis-bot-z16u.onrender.com/{TOKEN}"
 
 connection = psycopg2.connect(
     host=DB_HOST,
@@ -676,20 +677,36 @@ def enviar_email_acesso(destinatario, senha, nome_usuario, cargo):
 
 app = Flask(__name__)
 
-print("Tipo de app:", type(app))
-
-@app.route(f'/{TOKEN}', methods=['POST'])
+@app.route(f'/{TOKEN}', methods=['POST', 'GET'])
 def webhook():
-    update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
-    bot.process_new_updates([update])
+    if request.method == 'POST':
+        update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+        bot.process_new_updates([update])
     return "OK", 200
 
 @app.before_first_request
 def setup_webhook():
     bot.remove_webhook()
-    bot.set_webhook(url=f"https://suporte-mis-bot-z16u.onrender.com/{TOKEN}")
+    bot.set_webhook(url=WEBHOOK_URL)
     print(f"Webhook setado às {datetime.now().strftime('%H:%M:%S')}")
 
+def ping_periodico():
+    while True:
+        try:
+            response = requests.get(WEBHOOK_URL)
+            if response.status_code == 200:
+                print(f"Ping bem-sucedido em {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            else:
+                print(f"Ping falhou com status {response.status_code}")
+        except Exception as e:
+            print(f"Erro ao pingar: {e}")
+
+        time.sleep(5 * 60)  # espera 5 minutos
+
 if __name__ == "__main__":
+    # Inicia thread de ping em background
+    thread_ping = threading.Thread(target=ping_periodico, daemon=True)
+    thread_ping.start()
+
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
