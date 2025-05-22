@@ -7,4 +7,3 @@ pyodbc
 psycopg2-binary
 openpyxl
 XlsxWriter
-threading
