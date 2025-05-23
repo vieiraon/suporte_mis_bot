@@ -644,7 +644,7 @@ def enviar_email_acesso(destinatario, senha, nome_usuario, cargo):
     <div class="mensagem-box">
       🔐 Sua senha de acesso é: <strong>{senha}</strong>
     </div>
-    <p style="text-align: center; font-size: 16px"><strong>⚠️ Esta senha é válida por até 60 segundos e apenas para este acesso atual ⚠️</strong></p>
+    <p style="text-align: center; font-size: 16px"><strong>⚠️ Esta senha é válida apenas para esta solicitação ⚠️</strong></p>
     <div class="assinatura-box">
       <p class="assinatura-nome"><strong>Equipe de Suporte MIS ONLINE TELECOM</strong></p>
       <a class="botao-bot" href="https://t.me/suportemisbot" target="_blank">💬 Acesse o Suporte via Telegram</a>
