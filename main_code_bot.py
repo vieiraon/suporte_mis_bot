@@ -197,13 +197,16 @@ def processar_logar(message):
             estados_login.pop(chat_id, None)
             start(chat_id)
 
-@bot.message_handler(commands=['blindagem'])
+#@bot.message_handler(commands=['blindagem'])
 def receber_arquivo(message):
     chat_id = message.chat.id
-    
-    # Se passou nas duas validações, permite o envio do arquivo
+    if chat_id not in usuarios_logados:
+        bot.send_message(chat_id, "❌ Você precisa estar logado para usar essa função.")
+        iniciar_login(chat_id)
+        return
+    # Se passou na validação, permite o envio do arquivo
     bot.send_message(chat_id, "📎 Envie o arquivo Excel com as colunas de nome: contrato, celular, nome.")
-    estados[message.chat.id] = 'aguardando_arquivo'
+    estados[chat_id] = 'aguardando_arquivo'
 
 @bot.message_handler(content_types=['document'])
 def handle_document(message):
@@ -644,7 +647,7 @@ def enviar_email_acesso(destinatario, senha, nome_usuario, cargo):
     <p style="text-align: center; font-size: 16px"><strong>⚠️ Esta senha é válida por até 60 segundos e apenas para este acesso atual ⚠️</strong></p>
     <div class="assinatura-box">
       <p class="assinatura-nome"><strong>Equipe de Suporte MIS ONLINE TELECOM</strong></p>
-      <a class="botao-bot" href="https://t.me/mis_testes_bot" target="_blank">💬 Acesse o Suporte via Telegram</a>
+      <a class="botao-bot" href="https://t.me/suportemisbot" target="_blank">💬 Acesse o Suporte via Telegram</a>
     </div>
   </div>
 </body>
