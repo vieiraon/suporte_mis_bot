@@ -9,9 +9,7 @@ from flask import Flask, request
 import os
 import smtplib
 import pandas as pd
-import pyodbc
 import psycopg2
-from dotenv import load_dotenv
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -81,28 +79,29 @@ def menu_comandos(chat_id):
     texto_menu = "❓Do que você precisa agora?"
     keyboard = InlineKeyboardMarkup(row_width=1)
     keyboard.add(
-        InlineKeyboardButton("🔓 Logout", callback_data="logout"),
-        InlineKeyboardButton("📚 Suporte RID", callback_data="suporte_rid")
+        InlineKeyboardButton("📚 Suporte RID 📚", callback_data="suporte_rid"),
+        InlineKeyboardButton("🔓 Logout 🔓", callback_data="logout")
     )
     bot.send_message(chat_id, texto_menu, parse_mode='Markdown', reply_markup=keyboard)
-    logger.info(f"Usuário {chat_id} acessou o menu de comandos em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
 
 # ============================ FUNÇÃO LOGAR ============================
 @bot.message_handler(commands=['start'])
 def start(message):
     iniciar_login(message.chat.id)
-def iniciar_login(chat_id):
+def iniciar_login(chat_id, chat_username):
     if chat_id in usuarios_logados:
         bot.send_message(chat_id, "❌ Você já está logado.")
         menu_comandos(chat_id)
         return
-    bot.send_message(chat_id, "👋 Você está fazendo um login.")
+    bot.send_message(chat_id, "👋 Você está fazendo um login 👋")
     estados_login[chat_id] = 'aguardando_email_login'
     bot.send_message(chat_id, "📧 Por Favor, informe seu e-mail corporativo:")
-    
+    logger.info(f"Usuário {chat_username} solicitou um acesso - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
+
 @bot.message_handler(func=lambda message: message.chat.id in estados_login)
 def processar_logar(message):
     chat_id = message.chat.id
+    chat_username = message.from_user.username
     texto = message.text.strip()
     mensagens_usuario.setdefault(chat_id, []).append(message.message_id)
     estado = estados_login.get(chat_id)
@@ -111,13 +110,13 @@ def processar_logar(message):
         email = texto.lower()
         senha_aleatoria = str(random.randint(1, 999999)).zfill(6)
 
-        # URLs da API
+        # URLs da API PontoMais
         url_funcionarios = "https://api.pontomais.com.br/external_api/v1/employees?active=true&attributes=id,cpf,first_name,last_name,email,birthdate,job_title"
         url_cargos = "https://api.pontomais.com.br/external_api/v1/job_titles?attributes=id,code,name"
         
         headers = {
             "Content-Type": "application/json",
-            "access-token": ACESS_TOKEN  # Ou os.getenv("ACESS_TOKEN") se estiver usando dotenv
+            "access-token": ACESS_TOKEN
         }
 
         try:
@@ -152,25 +151,28 @@ def processar_logar(message):
                         }
                         estados_login[chat_id] = 'aguardando_senha_login'
                         bot.send_message(chat_id, "✉️ Senha enviada para seu e-mail! Informe a senha aqui para prosseguir:")
-
+                        logger.info(f"Usuário {chat_username} recebeu uma Senha no email: {email} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
                     else:
                         bot.send_message(chat_id, "❌ Erro ao enviar e-mail. Tente logar novamente.")
                         estados_login.pop(chat_id, None)
                         start(chat_id)
+                        logger.error(f"Usuário {chat_username} não teve a Senha Recebida no email: {email} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
                 else:
                     bot.send_message(chat_id, "❌ E-mail não encontrado. Tente logar novamente.")
                     estados_login.pop(chat_id, None)
                     start(chat_id)
+                    logger.warning(f"Usuário {chat_username} não teve a Senha Recebida no email: {email} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
             else:
                 bot.send_message(chat_id, "❌ Erro ao consultar funcionários. Tente logar novamente.")
                 estados_login.pop(chat_id, None)
                 start(chat_id)
+                logger.warning(f"Usuário {chat_username} não teve {email} encontrado no PontoMais - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
 
         except Exception as e:
-            logger.error(f"Erro durante login: {e}")
             bot.send_message(chat_id, "❌ Ocorreu um erro no login. Tente logar novamente.")
             estados_login.pop(chat_id, None)
             iniciar_login(chat_id)
+            logger.error(f"Usuário {chat_username} teve um erro ao Solicitar senha: {e} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
 
     elif estado == 'aguardando_senha_login':
         senha_informada = texto
@@ -189,17 +191,21 @@ def processar_logar(message):
                 estados_login.pop(chat_id, None)
                 senha_temporaria.pop(chat_id, None)
                 menu_comandos(chat_id)
+                logger.info(f"Usuário {chat_username} Logou com a senha: {senha_correta} e com o email: {email} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
                 
             else:
                 bot.send_message(chat_id, "❌ Senha incorreta. Tente novamente.")
+                logger.warning(f"Usuário {chat_username} informou a senha: {senha_informada} mas o esperado era: {senha_correta} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
         else:
             bot.send_message(chat_id, "⚠️ Nenhuma senha encontrada. Faça login novamente.")
             estados_login.pop(chat_id, None)
             start(chat_id)
+            logger.error(f"Usuário {chat_username} não recebeu nenhuma senha no email: {email} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
 
 #@bot.message_handler(commands=['blindagem'])
 def receber_arquivo(message):
     chat_id = message.chat.id
+    chat_username = message.from_user.username
     if chat_id not in usuarios_logados:
         bot.send_message(chat_id, "❌ Você precisa estar logado para usar essa função.")
         iniciar_login(chat_id)
@@ -207,9 +213,11 @@ def receber_arquivo(message):
     # Se passou na validação, permite o envio do arquivo
     bot.send_message(chat_id, "📎 Envie o arquivo Excel com as colunas de nome: contrato, celular, nome.")
     estados[chat_id] = 'aguardando_arquivo'
+    logger.info(f"Usuário {chat_username} solicitou uma verificação de blindagem - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
 
 @bot.message_handler(content_types=['document'])
 def handle_document(message):
+    chat_username = message.from_user.username
     if estados.get(message.chat.id) != 'aguardando_arquivo':
         return
 
@@ -233,6 +241,7 @@ def handle_document(message):
 
     except Exception as e:
         bot.send_message(message.chat.id, f"Erro ao ler o arquivo: {e}")
+        logger.error(f"Usuário {chat_username} teve um erro na leitura do seu arquivo {e} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
 
 def consultar_mudancas_e_gerar_excel(chat_id, df_excel, data_inicial, data_final):
     try:
@@ -394,11 +403,9 @@ def buscar_senha_por_email(chat_id, email):
                 parse_mode="MarkdownV2"
             )
             time.sleep(1)
-            logger.info(f"Usuário {chat_id} recebeu a senha do RID em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
             menu_comandos(chat_id)
         else:
             bot.send_message(chat_id, "❌ Não encontramos este e-mail no cadastro RID.")
-            logger.warning(f"Usuário {chat_id} tentou recuperação, mas o e-mail não foi encontrado em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
             menu_comandos(chat_id)
 
     except psycopg2.Error as e:
@@ -431,12 +438,10 @@ def esqueci_senha(call):
     if email_usuario:
         # Se tiver o e-mail salvo, já tenta buscar a senha
         buscar_senha_por_email(chat_id, email_usuario)
-        logger.info(f"Usuário {chat_id} o email do Usuário foi validado e sua senha do RID foi repassado em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
     else:
         # Se não tiver logado ele da erro
         bot.send_message(chat_id, "❗Não encontrei seu e-mail cadastrado.\n🟡Certifique que você esta logado aqui com o email do RID ou que tenha um Cadastro Válido.")
         menu_comandos(chat_id)
-        logger.warning(f"Usuário {chat_id} não esta logado com o email do RID ou não tem cadastro. Validado em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
 
 @bot.callback_query_handler(func=lambda call: call.data == "cadastro_rid")
 def cadastro_rid(call):
@@ -453,7 +458,9 @@ def cadastro_rid(call):
     caminho_absoluto = os.path.join(os.path.dirname(__file__), 'img', 'nome_nao_aparece.png')
     with open(caminho_absoluto, 'rb') as photo:
         bot.send_photo(chat_id, photo)
-    time.sleep(2)
+    
+    time.sleep(3)
+    
     bot.send_message(chat_id, 
         "✅ *Recomendamos seguir atentamente o checklist abaixo antes de prosseguir:*\n\n"
         "1️⃣ *Você já preencheu o formulário Cadastro RID 2025?*\n"
@@ -469,7 +476,9 @@ def cadastro_rid(call):
         "📌 Exemplo: `ANALISTA DO BOT DE SUPORTE MIS`\n\n",
         parse_mode='Markdown'
     )
-    time.sleep(2)
+    
+    time.sleep(5)
+    
     botao_cadastro = InlineKeyboardButton(
     text="👉 CLIQUE AQUI PARA CADASTRAR-SE 👈", 
     url="https://abrir.link/OGKyq"
@@ -477,6 +486,8 @@ def cadastro_rid(call):
     keyboard = [[botao_cadastro]]
     markup_cadastro = InlineKeyboardMarkup(keyboard)
 
+    time.sleep(2)
+    
     bot.send_message(
         chat_id=chat_id,
         text=(
@@ -486,7 +497,9 @@ def cadastro_rid(call):
         parse_mode="Markdown",
         reply_markup=markup_cadastro
     )
+    
     time.sleep(2)
+    
     menu_comandos(chat_id)
 
 @bot.callback_query_handler(func=lambda call: call.data == "contestar_comissao")
@@ -504,11 +517,9 @@ def logout(chat_id):
     if chat_id in usuarios_logados:
         usuarios_logados.remove(chat_id)
         bot.send_message(chat_id, "🔐 Você foi deslogado com sucesso!")
-        logger.info(f"Usuário {chat_id} foi deslogado em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
         start(chat_id)
     else:
         bot.send_message(chat_id, "❌ Você não está logado no momento.")
-        logger.warning(f"Tentativa de logout falhada: Usuário {chat_id} não está logado. Registro em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
         start(chat_id)
 
 # ------------------- CALLBACK E BOTÕES DO TELEGRAM ------------------#
@@ -675,8 +686,7 @@ def enviar_email_acesso(destinatario, senha, nome_usuario, cargo):
         servidor.quit()
         return True
     except Exception as e:
-        logger.warning(f"Ocorreu um erro enviar o email para o email {remetente}: {e} em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.")
-    return False
+        return False
 
 app = Flask(__name__)
 
